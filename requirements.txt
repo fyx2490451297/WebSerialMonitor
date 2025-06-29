@@ -1,0 +1,7 @@
+Flask
+Flask-SocketIO
+pyserial
+pyserial-asyncio
+requests
+websocket-client
+eventlet

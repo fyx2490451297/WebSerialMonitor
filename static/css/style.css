@@ -1,0 +1,199 @@
+/* --- Global and Layout Styles --- */
+:root {
+    --primary-color: #007bff;
+    --primary-hover-color: #0069d9;
+    --danger-color: #dc3545;
+    --danger-hover-color: #c82333;
+    --light-grey: #f8f9fa;
+    --border-color: #dee2e6;
+    --text-color: #343a40;
+    --text-light-color: #6c757d;
+}
+* { box-sizing: border-box; }
+html, body { 
+    height: 100%; 
+    margin: 0; 
+    padding: 0; 
+    overflow: hidden; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+}
+.page-container { 
+    display: flex; 
+    height: 100%; 
+}
+
+/* --- Slider Style --- */
+.sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    background-color: var(--light-grey);
+    border-right: 1px solid var(--border-color);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.sidebar h3 { 
+    margin: 0 0 10px 0; 
+    color: var(--text-color); 
+}
+.sidebar .form-group { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 5px; 
+}
+.sidebar .form-group label { 
+    font-size: 14px; 
+    font-weight: 500; 
+    color: var(--text-light-color); 
+}
+.sidebar .port-group { 
+    display: flex; 
+    gap: 5px; 
+}
+.sidebar .port-group select { 
+    flex-grow: 1; 
+    /* *** New Fix Added *** */
+    /* This is a classic flexbox fix that prevents flex items from refusing to shrink due to their intrinsic content size, 
+    which can cause overflow or overlap issues. */
+    min-width: 0;
+}
+.sidebar select { 
+    padding: 8px; 
+    font-size: 14px; 
+    border: 1px solid #ced4da; 
+    border-radius: 4px; 
+}
+
+/* --- button style --- */
+button {
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    background-color: var(--primary-color);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out, transform 0.1s ease;
+}
+button:hover {
+    background-color: var(--primary-hover-color);
+}
+button:active {
+    transform: scale(0.98);
+}
+button:disabled {
+    background-color: #adb5bd;
+    cursor: not-allowed;
+}
+#connect_button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    font-weight: bold;
+}
+#connect_button.connected { 
+    background-color: var(--danger-color);
+}
+#connect_button.connected:hover { 
+    background-color: var(--danger-hover-color);
+}
+#refresh_ports_button { 
+    padding: 8px 15px; 
+    font-weight: normal;
+}
+#clear_log_button {
+    font-weight: normal;
+    background-color: var(--text-light-color);
+}
+#clear_log_button:hover {
+    background-color: #5a6268;
+}
+
+/* --- Main content style --- */
+.main-content { 
+    flex-grow: 1; 
+    display: flex; 
+    flex-direction: column; 
+    background-color: #fff; 
+}
+.display-controls {
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.display-controls .control-group label { 
+    margin-left: 5px; 
+    user-select: none; 
+    cursor: pointer; 
+}
+#log {
+    flex-grow: 1;
+    padding: 15px 20px;
+    margin: 0;
+    overflow-y: scroll;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: "SF Mono", "Consolas", "Menlo", monospace;
+    font-size: 14px;
+    line-height: 1.6;
+}
+.log-line.tx { color: var(--primary-color); }
+.log-line.rx { color: var(--text-color); }
+.log-line.info { color: var(--text-light-color); font-style: italic; }
+.log-line .timestamp { 
+    color: var(--text-light-color); 
+    margin-right: 10px; 
+}
+
+.send-controls {
+    padding: 15px 20px;
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+#send_input { 
+    flex-grow: 1; 
+    padding: 10px; 
+    border: 1px solid #ced4da; 
+    border-radius: 4px; 
+    font-size: 14px; 
+}
+
+.status-bar {
+    padding: 5px 20px;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--light-grey);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.status-text { 
+    font-size: 14px; 
+    color: var(--text-light-color);
+}
+.led-indicators { 
+    display: flex; 
+    gap: 15px; 
+}
+.led-box { 
+    display: flex; 
+    align-items: center; 
+    gap: 5px; 
+}
+.led { 
+    width: 12px; 
+    height: 12px; 
+    border-radius: 50%; 
+    background-color: #adb5bd; 
+    transition: background-color 0.1s; 
+}
+.led.rx.on { background-color: var(--success-color); }
+.led.tx.on { background-color: #fd7e14; }

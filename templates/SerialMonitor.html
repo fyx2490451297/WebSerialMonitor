@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Serial Monitor Pro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<div class="page-container">
+    <!-- Left Sidebar: Connection Settings -->
+    <div class="sidebar" id="sidebar">
+        <h3>Connection Settings</h3>
+        <div class="form-group">
+            <label for="port_select">Serial Port</label>
+            <div class="port-group">
+                <select id="port_select">
+                    <option value="">-- Select Port --</option>
+                    {% for port in ports %}
+                        <option value="{{ port }}">{{ port }}</option>
+                    {% endfor %}
+                </select>
+                <button id="refresh_ports_button" title="Refresh Port List">Refresh</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="baudrate_select">Baud Rate</label>
+            <select id="baudrate_select">
+                {% for rate in baudrates %}
+                    <option value="{{ rate }}" {% if rate == 115200 %}selected{% endif %}>{{ rate }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div style="flex-grow: 1;"></div> <!-- Spacer -->
+        <button id="connect_button" class="disconnected">Open Port</button>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="display-controls">
+            <div class="control-group">
+                <input type="checkbox" id="timestamp_toggle" checked>
+                <label for="timestamp_toggle">Show Timestamps</label>
+            </div>
+            <div style="flex-grow: 1;"></div>
+            <button id="clear_log_button">Clear Log</button>
+        </div>
+        <pre id="log"></pre>
+        <div class="send-controls">
+            <input id="send_input" autocomplete="off" placeholder="Enter data to send..." disabled/>
+            <button id="send_button" type="button" disabled>Send</button>
+        </div>
+        <div class="status-bar">
+            <div id="status_text" class="status-text">Disconnected</div>
+            <div class="led-indicators">
+                <div class="led-box"><span>RX</span><div id="rx_led" class="led rx"></div></div>
+                <div class="led-box"><span>TX</span><div id="tx_led" class="led tx"></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='js/monitor.js') }}" defer></script>
+
+</body>
+</html>
