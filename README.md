@@ -1,6 +1,8 @@
 Web Serial Monitor Pro
 A lightweight, modern, and powerful web-based serial monitor designed for remote debugging and team collaboration.
 
+[Read this document in Chinese](README.CN.md)
+
 The Core Problem It Solves
 Have you ever encountered these scenarios?
 
