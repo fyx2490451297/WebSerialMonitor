@@ -99,6 +99,15 @@ button:disabled {
     padding: 8px 15px; 
     font-weight: normal;
 }
+
+#save_log_button {
+    font-weight: normal;
+    background-color: var(--text-light-color);
+}
+#save_log_button:hover {
+    background-color: #5a6268;
+}
+
 #clear_log_button {
     font-weight: normal;
     background-color: var(--text-light-color);

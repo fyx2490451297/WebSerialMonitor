@@ -9,7 +9,7 @@
 <body>
 
 <div class="page-container">
-    <!-- 左侧边栏 (保持不变) -->
+    <!-- Left Sidebar (remains the same) -->
     <div class="sidebar" id="sidebar">
         <h3>Connection Settings</h3>
         <div class="form-group">
@@ -32,21 +32,25 @@
                 {% endfor %}
             </select>
         </div>
-        <div style="flex-grow: 1;"></div> <!-- Spacer -->
+        <div style="flex-grow: 1;"></div>
         <button id="connect_button" class="disconnected">Open Port</button>
     </div>
 
     <!-- Main Content Area -->
     <div class="main-content">
+        <!-- Display Controls -->
         <div class="display-controls">
             <div class="control-group">
                 <input type="checkbox" id="timestamp_toggle" checked>
                 <label for="timestamp_toggle">Show Timestamps</label>
             </div>
             <div style="flex-grow: 1;"></div>
+            <!-- *** NEW: Added Save Log button *** -->
+            <button id="save_log_button" disabled>Save Log</button>
             <button id="clear_log_button">Clear Log</button>
         </div>
         <pre id="log"></pre>
+        <!-- Send Controls (remains the same) -->
         <div class="send-controls">
             <input id="send_input" autocomplete="off" placeholder="Enter data to send..." disabled/>
             <button id="send_button" type="button" disabled>Send</button>
@@ -57,6 +61,8 @@
                 <label for="timed_send_toggle" id="timed_send_toggle_label">Timed Send</label>
             </div>
         </div>
+
+        <!-- Status Bar (remains the same) -->
         <div class="status-bar">
             <div id="status_text" class="status-text">Disconnected</div>
             <div class="led-indicators">

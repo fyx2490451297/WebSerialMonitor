@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusText = document.getElementById('status_text');
     const logDiv = document.getElementById('log');
     const clearLogButton = document.getElementById('clear_log_button');
+    const saveLogButton = document.getElementById('save_log_button');
     const sendInput = document.getElementById('send_input');
     const sendButton = document.getElementById('send_button');
     const rxLed = document.getElementById('rx_led');
@@ -27,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elementsToDisable.forEach(el => el.disabled = true);
             sendInput.disabled = false;
             sendButton.disabled = false;
+            saveLogButton.disabled = false;
             statusText.textContent = `Connected to ${portSelect.value} @ ${baudrateSelect.value} bps`;
         } else {
             connectButton.textContent = 'Open Port';
@@ -34,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
             elementsToDisable.forEach(el => el.disabled = false);
             sendInput.disabled = true;
             sendButton.disabled = true;
+            saveLogButton.disabled = true;
             statusText.textContent = 'Disconnected';
             if(socket) socket.disconnect();
             socket = null;
@@ -106,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 2000);
     });
-    
+
     // --- Helper Functions ---
     function logToScreen(message, type) {
         const isScrolledToBottom = logDiv.scrollHeight - logDiv.clientHeight <= logDiv.scrollTop + 5;
@@ -129,6 +132,35 @@ document.addEventListener('DOMContentLoaded', () => {
         logToScreen(`// Log cleared at ${new Date().toLocaleTimeString()}`, 'info');
     });
 
+    saveLogButton.addEventListener('click', () => {
+        // 1. Get the plain text content from the log display area.
+        const logText = logDiv.innerText;
+
+        if (!logText.trim()) {
+            alert('Log is empty, nothing to save.');
+            return;
+        }
+
+        // 2. Create a Blob object, which represents the file's content.
+        const blob = new Blob([logText], { type: 'text/plain;charset=utf-8' });
+
+        // 3. Create a temporary invisible link element.
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        
+        // 4. Set the filename for the download.
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+        link.download = `serial-log-${portSelect.value}-${timestamp}.log`;
+
+        // 5. Programmatically click the link to trigger the browser's download dialog.
+        document.body.appendChild(link);
+        link.click();
+
+        // 6. Clean up by removing the temporary link and revoking the object URL.
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    });
+
     function sendData() {
         const data = sendInput.value;
         if(data && connectButton.classList.contains('connected')) {
@@ -142,12 +174,12 @@ document.addEventListener('DOMContentLoaded', () => {
     sendInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); sendData(); }
     });
-    
+
     function flashLed(ledElement) {
         ledElement.classList.add('on');
         setTimeout(() => ledElement.classList.remove('on'), 150);
     }
-    
+
     // --- Timed Send Logic ---
     timedSendToggle.addEventListener('change', function() {
         if (this.checked) {
