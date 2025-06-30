@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const rxLed = document.getElementById('rx_led');
     const txLed = document.getElementById('tx_led');
     const timestampToggle = document.getElementById('timestamp_toggle');
+    const intervalInput = document.getElementById('interval_input');
+    const timedSendToggle = document.getElementById('timed_send_toggle');
+    let timedSendTimerId = null;
 
     // --- UI Update Function ---
     function updateUIForConnection(isConnected) {
@@ -42,6 +45,10 @@ document.addEventListener('DOMContentLoaded', () => {
         _socket.on('connect', () => updateUIForConnection(true));
         _socket.on('disconnect', () => {
             logToScreen('// Disconnected from server.', 'info');
+            if (timedSendToggle.checked) {
+                timedSendToggle.checked = false;
+                timedSendToggle.dispatchEvent(new Event('change'));
+            }
             updateUIForConnection(false);
         });
         _socket.on('serial_data_recv', (msg) => {
@@ -140,4 +147,40 @@ document.addEventListener('DOMContentLoaded', () => {
         ledElement.classList.add('on');
         setTimeout(() => ledElement.classList.remove('on'), 150);
     }
+    
+    // --- Timed Send Logic ---
+    timedSendToggle.addEventListener('change', function() {
+        if (this.checked) {
+            const data = sendInput.value;
+            const interval = parseInt(intervalInput.value, 10);
+            if (!data) {
+                alert('Send content cannot be empty!');
+                this.checked = false; return;
+            }
+            if (isNaN(interval) || interval < 100) {
+                alert('Interval must be a number greater than or equal to 100!');
+                this.checked = false; return;
+            }
+            timedSendTimerId = setInterval(() => { sendData(data); }, interval);
+            sendInput.disabled = true;
+            sendButton.disabled = true;
+            intervalInput.disabled = true;
+            statusText.textContent = `Sending data every ${interval}ms...`;
+        } else {
+            if (timedSendTimerId) {
+                clearInterval(timedSendTimerId);
+                timedSendTimerId = null;
+            }
+            if (connectButton.classList.contains('connected')) {
+                sendInput.disabled = false;
+                sendButton.disabled = false;
+            }
+            intervalInput.disabled = false;
+            if (socket && socket.connected) {
+                statusText.textContent = `Connected to ${portSelect.value} @ ${baudrateSelect.value} bps`;
+            } else {
+                statusText.textContent = 'Disconnected';
+            }
+        }
+    });
 });

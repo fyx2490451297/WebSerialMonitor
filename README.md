@@ -56,25 +56,6 @@ Frontend: HTML5, CSS3 (Flexbox), Vanilla JavaScript
 
 Real-time Communication: WebSocket (via Socket.IO)
 
-📂 Project Structure
-/
-├── static/
-│   ├── css/
-│   │   └── style.css       # All CSS styles
-│   └── js/
-│       └── monitor.js      # All frontend JavaScript logic
-├── templates/
-│   └── serial_monitor.html   # Main page HTML template
-├── app.py                  # Main Flask application entry point
-├── extensions.py           # Shared Flask extension instances
-├── serial_handlers.py      # Socket.IO event handlers
-├── serial_manager.py       # Low-level async serial communication logic
-├── utils.py                # Utility functions
-├── python_client.py        # Command-line client example
-├── virtual_device.py       # Virtual serial device testing tool
-├── requirements.txt        # Project dependencies
-└── README.md               # This documentation
-
 🚀 Installation and Usage
 1. Clone or Download the Project
 

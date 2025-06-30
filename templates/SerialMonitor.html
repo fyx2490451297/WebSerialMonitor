@@ -9,7 +9,7 @@
 <body>
 
 <div class="page-container">
-    <!-- Left Sidebar: Connection Settings -->
+    <!-- 左侧边栏 (保持不变) -->
     <div class="sidebar" id="sidebar">
         <h3>Connection Settings</h3>
         <div class="form-group">
@@ -50,6 +50,12 @@
         <div class="send-controls">
             <input id="send_input" autocomplete="off" placeholder="Enter data to send..." disabled/>
             <button id="send_button" type="button" disabled>Send</button>
+            <div class="timed-send-container">
+                <input type="number" id="interval_input" value="1000" min="100">
+                <span>ms</span>
+                <input type="checkbox" id="timed_send_toggle">
+                <label for="timed_send_toggle" id="timed_send_toggle_label">Timed Send</label>
+            </div>
         </div>
         <div class="status-bar">
             <div id="status_text" class="status-text">Disconnected</div>

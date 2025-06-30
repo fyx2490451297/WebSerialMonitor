@@ -1,9 +1,8 @@
 /* --- Global and Layout Styles --- */
 :root {
     --primary-color: #007bff;
-    --primary-hover-color: #0069d9;
+    --success-color: #28a745;
     --danger-color: #dc3545;
-    --danger-hover-color: #c82333;
     --light-grey: #f8f9fa;
     --border-color: #dee2e6;
     --text-color: #343a40;
@@ -22,7 +21,7 @@ html, body {
     height: 100%; 
 }
 
-/* --- Slider Style --- */
+/* --- Sidebar Styles --- */
 .sidebar {
     width: 280px;
     flex-shrink: 0;
@@ -53,10 +52,7 @@ html, body {
 }
 .sidebar .port-group select { 
     flex-grow: 1; 
-    /* *** New Fix Added *** */
-    /* This is a classic flexbox fix that prevents flex items from refusing to shrink due to their intrinsic content size, 
-    which can cause overflow or overlap issues. */
-    min-width: 0;
+    min-width: 0; /* Flexbox fix for overflow */
 }
 .sidebar select { 
     padding: 8px; 
@@ -65,7 +61,7 @@ html, body {
     border-radius: 4px; 
 }
 
-/* --- button style --- */
+/* --- Unified Button Styles --- */
 button {
     padding: 10px 20px;
     font-size: 14px;
@@ -78,7 +74,7 @@ button {
     transition: background-color 0.2s ease-in-out, transform 0.1s ease;
 }
 button:hover {
-    background-color: var(--primary-hover-color);
+    background-color: #0069d9;
 }
 button:active {
     transform: scale(0.98);
@@ -97,7 +93,7 @@ button:disabled {
     background-color: var(--danger-color);
 }
 #connect_button.connected:hover { 
-    background-color: var(--danger-hover-color);
+    background-color: #c82333;
 }
 #refresh_ports_button { 
     padding: 8px 15px; 
@@ -111,7 +107,7 @@ button:disabled {
     background-color: #5a6268;
 }
 
-/* --- Main content style --- */
+/* --- Main Content Styles --- */
 .main-content { 
     flex-grow: 1; 
     display: flex; 
@@ -164,6 +160,28 @@ button:disabled {
     border: 1px solid #ced4da; 
     border-radius: 4px; 
     font-size: 14px; 
+}
+
+/* Timed Send Controls Styles */
+.timed-send-container {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border-left: 2px solid var(--light-grey);
+    padding-left: 10px;
+}
+#interval_input {
+    width: 80px;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    text-align: center;
+}
+#timed_send_toggle_label {
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
 }
 
 .status-bar {
