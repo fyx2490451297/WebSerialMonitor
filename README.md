@@ -1,4 +1,7 @@
-Web Serial Monitor Pro
+<h1>Web Serial Monitor</h1>
+
+![SerialMonitor!](/assets/images/SerialMonitor.png)
+
 A lightweight, modern, and powerful web-based serial monitor designed for remote debugging and team collaboration.
 
 [Read this document in Chinese](README.CN.md)
@@ -14,7 +17,7 @@ Team members are in different locations but need to observe the real-time output
 
 You don't want to configure a complex set of serial drivers and debugging tools on every team member's computer.
 
-Web Serial Monitor Pro is built to solve these pain points. It uses a server-client (C/S) architecture. You only need to run this application on a server that has physical access to the serial devices. Then, anyone on your team can securely access and operate these serial ports in real-time from anywhere, using just a web browser. This dramatically improves the efficiency of remote work and team collaboration.
+Web Serial Monitor is built to solve these pain points. It uses a server-client (C/S) architecture. You only need to run this application on a server that has physical access to the serial devices. Then, anyone on your team can securely access and operate these serial ports in real-time from anywhere, using just a web browser. This dramatically improves the efficiency of remote work and team collaboration.
 
 ✨ Features
 Remote Real-time Access: Monitor and control physical serial ports on a remote server in real-time through a web browser.
