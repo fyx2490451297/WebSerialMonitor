@@ -22,10 +22,14 @@ class SerialMonitor(asyncio.Protocol):
 
     def data_received(self, data):
         self._buffer.extend(data)
+
+        # Normalize line endings to \n
+        self._buffer = self._buffer.replace(b'\r\n', b'\n')
+        self._buffer = self._buffer.replace(b'\r', b'\n')
+
         while b'\n' in self._buffer:
             line_bytes, self._buffer = self._buffer.split(b'\n', 1)
-            line_bytes = line_bytes.strip(b'\r')
-            
+
             try:
                 decoded_line = line_bytes.decode('utf-8', errors='replace')
                 if decoded_line:

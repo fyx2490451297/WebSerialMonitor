@@ -19,6 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const timedSendToggle = document.getElementById('timed_send_toggle');
     let timedSendTimerId = null;
 
+    // Define the maximum number of log lines to keep in the display
+    const MAX_LOG_LINES = 5000;
+
     // --- UI Update Function ---
     function updateUIForConnection(isConnected) {
         const elementsToDisable = [portSelect, baudrateSelect, refreshButton];
@@ -124,6 +127,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         line.appendChild(document.createTextNode(message));
         logDiv.appendChild(line);
+
+        // Check if the number of log lines exceeds the maximum
+        if (logDiv.childElementCount > MAX_LOG_LINES) {
+            // If it does, remove the oldest log line (the first child)
+            logDiv.removeChild(logDiv.firstChild);
+        }
+
         if (isScrolledToBottom) logDiv.scrollTop = logDiv.scrollHeight;
     }
 
