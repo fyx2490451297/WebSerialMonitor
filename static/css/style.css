@@ -31,6 +31,7 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    overflow-y: auto;
 }
 .sidebar h3 { 
     margin: 0 0 10px 0; 
@@ -149,7 +150,16 @@ button:disabled {
 }
 .log-line.tx { color: var(--primary-color); }
 .log-line.rx { color: var(--text-color); }
-.log-line.info { color: var(--text-light-color); font-style: italic; }
+.log-line.hex { color: #28a745; letter-spacing: 0.05em; }
+.log-line.info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-left: 3px solid #17a2b8;
+    padding: 1px 8px 1px 6px;
+    margin: 3px 0;
+    font-style: italic;
+    border-radius: 0 3px 3px 0;
+}
 .log-line .timestamp { 
     color: var(--text-light-color); 
     margin-right: 10px; 
@@ -224,3 +234,67 @@ button:disabled {
 }
 .led.rx.on { background-color: var(--success-color); }
 .led.tx.on { background-color: #fd7e14; }
+
+/* --- Baud Rate combo (select + custom input) --- */
+.baudrate-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.baudrate-group select {
+    width: 100%;
+}
+#baudrate_custom {
+    padding: 8px;
+    font-size: 14px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    width: 100%;
+}
+
+/* --- Serial Config Grid (Data / Parity / Stop Bits) --- */
+.serial-config-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 5px;
+}
+.serial-config-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.serial-config-grid label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-light-color);
+}
+.serial-config-grid select {
+    padding: 5px 3px;
+    font-size: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    width: 100%;
+}
+
+/* --- Line Ending Select --- */
+#line_ending_select {
+    padding: 10px 6px;
+    font-size: 13px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+/* --- HEX Send Checkbox --- */
+.hex-send-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 0 4px;
+}
+.hex-send-container label {
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+}

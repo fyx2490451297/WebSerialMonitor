@@ -4,6 +4,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('sidebar');
     const portSelect = document.getElementById('port_select');
     const baudrateSelect = document.getElementById('baudrate_select');
+    const baudrateCustom = document.getElementById('baudrate_custom');
+    const bytesizeSelect = document.getElementById('bytesize_select');
+    const paritySelect = document.getElementById('parity_select');
+    const stopbitsSelect = document.getElementById('stopbits_select');
     const refreshButton = document.getElementById('refresh_ports_button');
     const connectButton = document.getElementById('connect_button');
     const statusText = document.getElementById('status_text');
@@ -11,34 +15,58 @@ document.addEventListener('DOMContentLoaded', () => {
     const clearLogButton = document.getElementById('clear_log_button');
     const saveLogButton = document.getElementById('save_log_button');
     const sendInput = document.getElementById('send_input');
+    const lineEndingSelect = document.getElementById('line_ending_select');
     const sendButton = document.getElementById('send_button');
+    const hexDisplayToggle = document.getElementById('hex_display_toggle');
+    const hexSendToggle = document.getElementById('hex_send_toggle');
     const rxLed = document.getElementById('rx_led');
     const txLed = document.getElementById('tx_led');
     const timestampToggle = document.getElementById('timestamp_toggle');
     const intervalInput = document.getElementById('interval_input');
     const timedSendToggle = document.getElementById('timed_send_toggle');
     let timedSendTimerId = null;
+    let isClosingManually = false;
+    let activeBaudrate = '';
 
     // Define the maximum number of log lines to keep in the display
     const MAX_LOG_LINES = 5000;
 
+    // --- Baud Rate: show/hide custom input ---
+    baudrateSelect.addEventListener('change', function() {
+        baudrateCustom.style.display = this.value === 'custom' ? 'block' : 'none';
+        if (this.value === 'custom') baudrateCustom.focus();
+    });
+
+    function getSelectedBaudrate() {
+        if (baudrateSelect.value === 'custom') {
+            const v = parseInt(baudrateCustom.value, 10);
+            if (!v || v < 1) { alert('Please enter a valid baud rate.'); return null; }
+            return v;
+        }
+        return baudrateSelect.value;
+    }
+
     // --- UI Update Function ---
     function updateUIForConnection(isConnected) {
-        const elementsToDisable = [portSelect, baudrateSelect, refreshButton];
+        const elementsToDisable = [portSelect, baudrateSelect, baudrateCustom, bytesizeSelect, paritySelect, stopbitsSelect, refreshButton];
         if (isConnected) {
             connectButton.textContent = 'Close Port';
             connectButton.className = 'connected';
             elementsToDisable.forEach(el => el.disabled = true);
             sendInput.disabled = false;
             sendButton.disabled = false;
+            lineEndingSelect.disabled = false;
+            hexSendToggle.disabled = false;
             saveLogButton.disabled = false;
-            statusText.textContent = `Connected to ${portSelect.value} @ ${baudrateSelect.value} bps`;
+            statusText.textContent = `Connected to ${portSelect.value} @ ${activeBaudrate} bps`;
         } else {
             connectButton.textContent = 'Open Port';
             connectButton.className = 'disconnected';
             elementsToDisable.forEach(el => el.disabled = false);
             sendInput.disabled = true;
             sendButton.disabled = true;
+            lineEndingSelect.disabled = true;
+            hexSendToggle.disabled = true;
             saveLogButton.disabled = true;
             statusText.textContent = 'Disconnected';
             if(socket) socket.disconnect();
@@ -50,7 +78,12 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupSocketEventHandlers(_socket) {
         _socket.on('connect', () => updateUIForConnection(true));
         _socket.on('disconnect', () => {
-            logToScreen('// Disconnected from server.', 'info');
+            if (isClosingManually) {
+                logToScreen(`// Port closed.`, 'info');
+                isClosingManually = false;
+            } else {
+                logToScreen('// Connection lost (disconnected from server).', 'info');
+            }
             if (timedSendToggle.checked) {
                 timedSendToggle.checked = false;
                 timedSendToggle.dispatchEvent(new Event('change'));
@@ -58,8 +91,16 @@ document.addEventListener('DOMContentLoaded', () => {
             updateUIForConnection(false);
         });
         _socket.on('serial_data_recv', (msg) => {
-            flashLed(rxLed);
-            logToScreen(msg.data, 'rx');
+            if (!hexDisplayToggle.checked) {
+                flashLed(rxLed);
+                logToScreen(msg.data, 'rx');
+            }
+        });
+        _socket.on('serial_data_recv_hex', (msg) => {
+            if (hexDisplayToggle.checked) {
+                flashLed(rxLed);
+                logToScreen(msg.data, 'hex');
+            }
         });
         _socket.on('serial_error', (msg) => logToScreen(`Error: ${msg.message}`, 'info'));
         _socket.on('connect_error', (err) => {
@@ -71,13 +112,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Main Action Event Listeners ---
     connectButton.addEventListener('click', () => {
         if (connectButton.classList.contains('connected')) {
+            isClosingManually = true;
             updateUIForConnection(false);
         } else {
             const port = portSelect.value;
             if (!port) { alert('Please select a serial port first!'); return; }
-            const baudrate = baudrateSelect.value;
+            const baudrate = getSelectedBaudrate();
+            if (!baudrate) return;
+            activeBaudrate = baudrate;
+            const bytesize = bytesizeSelect.value;
+            const parity = paritySelect.value;
+            const stopbits = stopbitsSelect.value;
             statusText.textContent = `Connecting to ${port}...`;
-            socket = io('/serial', { query: { port, baudrate } });
+            socket = io('/serial', { query: { port, baudrate, bytesize, parity, stopbits } });
             setupSocketEventHandlers(socket);
         }
     });
@@ -173,11 +220,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function sendData() {
         const data = sendInput.value;
-        if(data && connectButton.classList.contains('connected')) {
-            socket.emit('serial_data_send', {data});
-            logToScreen(data, 'tx');
-            flashLed(txLed);
+        if (!data || !connectButton.classList.contains('connected')) return;
+
+        if (hexSendToggle.checked) {
+            const hexClean = data.replace(/[\s:]/g, '');
+            if (!/^[0-9a-fA-F]+$/.test(hexClean) || hexClean.length % 2 !== 0) {
+                alert('Invalid HEX input. Please enter pairs of hex digits separated by spaces (e.g. FF 01 AB CD).');
+                return;
+            }
+            socket.emit('serial_data_send', { data: hexClean, is_hex: true });
+            logToScreen(hexClean.toUpperCase().match(/.{2}/g).join(' '), 'tx');
+        } else {
+            const endingMap = { none: '', lf: '\n', cr: '\r', crlf: '\r\n' };
+            const end_with = endingMap[lineEndingSelect.value];
+            socket.emit('serial_data_send', { data, end_with });
+            if (hexDisplayToggle.checked) {
+                // Show TX bytes as HEX when HEX display mode is active
+                const hexStr = Array.from(new TextEncoder().encode(data))
+                    .map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+                logToScreen(hexStr, 'tx');
+            } else {
+                logToScreen(data, 'tx');
+            }
         }
+        flashLed(txLed);
     }
 
     sendButton.addEventListener('click', sendData);
@@ -189,6 +255,19 @@ document.addEventListener('DOMContentLoaded', () => {
         ledElement.classList.add('on');
         setTimeout(() => ledElement.classList.remove('on'), 150);
     }
+
+    hexDisplayToggle.addEventListener('change', function() {
+        logToScreen(`// Display mode switched to: ${this.checked ? 'HEX' : 'Text'}`, 'info');
+    });
+
+    timestampToggle.addEventListener('change', function() {
+        logToScreen(`// Timestamps ${this.checked ? 'enabled' : 'disabled'}`, 'info');
+    });
+
+    hexSendToggle.addEventListener('change', function() {
+        sendInput.placeholder = this.checked ? 'e.g. FF 01 AB CD ...' : 'Enter data to send...';
+        sendInput.value = '';
+    });
 
     // --- Timed Send Logic ---
     timedSendToggle.addEventListener('change', function() {
@@ -206,6 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
             timedSendTimerId = setInterval(() => { sendData(data); }, interval);
             sendInput.disabled = true;
             sendButton.disabled = true;
+            lineEndingSelect.disabled = true;
+            hexSendToggle.disabled = true;
             intervalInput.disabled = true;
             statusText.textContent = `Sending data every ${interval}ms...`;
         } else {
@@ -216,10 +297,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (connectButton.classList.contains('connected')) {
                 sendInput.disabled = false;
                 sendButton.disabled = false;
+                lineEndingSelect.disabled = false;
+                hexSendToggle.disabled = false;
             }
             intervalInput.disabled = false;
             if (socket && socket.connected) {
-                statusText.textContent = `Connected to ${portSelect.value} @ ${baudrateSelect.value} bps`;
+                statusText.textContent = `Connected to ${portSelect.value} @ ${activeBaudrate} bps`;
             } else {
                 statusText.textContent = 'Disconnected';
             }

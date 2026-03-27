@@ -26,11 +26,44 @@
         </div>
         <div class="form-group">
             <label for="baudrate_select">Baud Rate</label>
-            <select id="baudrate_select">
-                {% for rate in baudrates %}
-                    <option value="{{ rate }}" {% if rate == 115200 %}selected{% endif %}>{{ rate }}</option>
-                {% endfor %}
-            </select>
+            <div class="baudrate-group">
+                <select id="baudrate_select">
+                    {% for rate in baudrates %}
+                        <option value="{{ rate }}" {% if rate == 115200 %}selected{% endif %}>{{ rate }}</option>
+                    {% endfor %}
+                    <option value="custom">Custom...</option>
+                </select>
+                <input type="number" id="baudrate_custom" placeholder="e.g. 2000000" min="1" style="display:none;">
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Serial Config</label>
+            <div class="serial-config-grid">
+                <div>
+                    <label for="bytesize_select">Data</label>
+                    <select id="bytesize_select">
+                        {% for bits in data_bits %}
+                            <option value="{{ bits }}" {% if bits == 8 %}selected{% endif %}>{{ bits }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="parity_select">Parity</label>
+                    <select id="parity_select">
+                        {% for val, label in parity_options %}
+                            <option value="{{ val }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="stopbits_select">Stop</label>
+                    <select id="stopbits_select">
+                        {% for bits in stop_bits %}
+                            <option value="{{ bits }}" {% if bits == '1' %}selected{% endif %}>{{ bits }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
         </div>
         <div style="flex-grow: 1;"></div>
         <button id="connect_button" class="disconnected">Open Port</button>
@@ -44,6 +77,10 @@
                 <input type="checkbox" id="timestamp_toggle" checked>
                 <label for="timestamp_toggle">Show Timestamps</label>
             </div>
+            <div class="control-group">
+                <input type="checkbox" id="hex_display_toggle">
+                <label for="hex_display_toggle">HEX Display</label>
+            </div>
             <div style="flex-grow: 1;"></div>
             <!-- *** NEW: Added Save Log button *** -->
             <button id="save_log_button" disabled>Save Log</button>
@@ -53,7 +90,17 @@
         <!-- Send Controls (remains the same) -->
         <div class="send-controls">
             <input id="send_input" autocomplete="off" placeholder="Enter data to send..." disabled/>
+            <select id="line_ending_select">
+                <option value="crlf">CRLF</option>
+                <option value="lf">LF</option>
+                <option value="cr">CR</option>
+                <option value="none">None</option>
+            </select>
             <button id="send_button" type="button" disabled>Send</button>
+            <div class="hex-send-container">
+                <input type="checkbox" id="hex_send_toggle" disabled>
+                <label for="hex_send_toggle">HEX</label>
+            </div>
             <div class="timed-send-container">
                 <input type="number" id="interval_input" value="1000" min="100">
                 <span>ms</span>

@@ -17,6 +17,19 @@ class SerialNamespace(Namespace):
             baudrate = 115200
             logging.warning(f"Client {request.sid} provided an invalid baud rate, using default {baudrate}")
 
+        try:
+            bytesize = int(request.args.get('bytesize', 8))
+        except (ValueError, TypeError):
+            bytesize = 8
+
+        parity = request.args.get('parity', 'N')
+        if parity not in ('N', 'E', 'O', 'M', 'S'):
+            parity = 'N'
+
+        stopbits_str = request.args.get('stopbits', '1')
+        stopbits_map = {'1': 1, '1.5': 1.5, '2': 2}
+        stopbits = stopbits_map.get(stopbits_str, 1)
+
         if not port:
             logging.warning(f"Client {request.sid} connected without a port, connection rejected.")
             return False
@@ -26,15 +39,18 @@ class SerialNamespace(Namespace):
 
         if port not in connected_serials:
             connected_serials[port] = {
-                'baudrate': baudrate, 
-                'serial_thread': None, 
-                'serial_thread_lock': Lock(), 
-                'clients': 1, 
+                'baudrate': baudrate,
+                'bytesize': bytesize,
+                'parity': parity,
+                'stopbits': stopbits,
+                'serial_thread': None,
+                'serial_thread_lock': Lock(),
+                'clients': 1,
                 'send_data': queue.Queue()
             }
         else:
             connected_serials[port]['clients'] += 1
-        
+
         clients_num = connected_serials[port]['clients']
         logging.info(f"Number of clients for port {port}: {clients_num}")
 
@@ -42,7 +58,9 @@ class SerialNamespace(Namespace):
             with connected_serials[port]['serial_thread_lock']:
                 if connected_serials[port]['serial_thread'] is None:
                     logging.info(f"Starting serial monitor background task for port {port}.")
-                    connected_serials[port]['serial_thread'] = socketio.start_background_task(start_serial_monitor, port, baudrate)
+                    connected_serials[port]['serial_thread'] = socketio.start_background_task(
+                        start_serial_monitor, port, baudrate, bytesize, parity, stopbits
+                    )
         return True
 
     def on_disconnect(self):
@@ -62,11 +80,21 @@ class SerialNamespace(Namespace):
 
     def on_serial_data_send(self, message):
         port = next((room for room in self.rooms(request.sid) if room != request.sid), None)
-        end_with = message.get('end_with', '\r\n')
 
         if port and port in connected_serials:
-            send_data = message.get('data', '')
-            logging.info(f"SEND -> {port}: {send_data}")
-            if not send_data.endswith(end_with):
+            is_hex = message.get('is_hex', False)
+
+            if is_hex:
+                hex_str = message.get('data', '').replace(' ', '').replace(':', '')
+                try:
+                    data_bytes = bytes.fromhex(hex_str)
+                    logging.info(f"SEND HEX -> {port}: {hex_str.upper()}")
+                    connected_serials[port]['send_data'].put(data_bytes)
+                except ValueError:
+                    logging.warning(f"Invalid hex string from client {request.sid}: {hex_str}")
+            else:
+                send_data = message.get('data', '')
+                end_with = message.get('end_with', '\r\n')
                 send_data += end_with
-            connected_serials[port]['send_data'].put(send_data)
+                logging.info(f"SEND -> {port}: {send_data!r}")
+                connected_serials[port]['send_data'].put(send_data.encode('utf-8', errors='ignore'))

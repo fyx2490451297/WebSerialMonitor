@@ -7,7 +7,7 @@ from extensions import socketio, connected_serials
 
 class SerialMonitor(asyncio.Protocol):
     """Asynchronous serial monitor protocol class."""
-    def __init__(self, port, baudrate=115200):
+    def __init__(self, port, baudrate=115200, bytesize=8, parity='N', stopbits=1):
         super().__init__()
         self.port = port
         self.transport = None
@@ -21,6 +21,10 @@ class SerialMonitor(asyncio.Protocol):
         logging.info(f"Successfully opened serial port: {self.port}")
 
     def data_received(self, data):
+        # Emit raw hex bytes for clients in HEX display mode
+        hex_str = ' '.join(f'{b:02X}' for b in data)
+        socketio.emit('serial_data_recv_hex', {'data': hex_str}, room=self.port, namespace='/serial')
+
         self._buffer.extend(data)
 
         # Normalize line endings to \n
@@ -52,19 +56,20 @@ class SerialMonitor(asyncio.Protocol):
             except asyncio.CancelledError:
                 break
 
-async def main_serial_loop(port, baudrate):
+async def main_serial_loop(port, baudrate, bytesize=8, parity='N', stopbits=1):
     """The main function for the asynchronous task."""
     try:
         loop = asyncio.get_running_loop()
-        protocol = SerialMonitor(port, baudrate)
+        protocol = SerialMonitor(port, baudrate, bytesize, parity, stopbits)
         transport, _ = await serial_asyncio.create_serial_connection(
-            loop, lambda: protocol, port, baudrate
+            loop, lambda: protocol, port, baudrate,
+            bytesize=bytesize, parity=parity, stopbits=stopbits
         )
         write_task = asyncio.create_task(protocol.write_data())
         while port in connected_serials:
             if not connected_serials[port]['send_data'].empty():
-                data_to_send = connected_serials[port]['send_data'].get()
-                await protocol.send_queue.put(data_to_send.encode('utf-8', errors='ignore'))
+                data_bytes = connected_serials[port]['send_data'].get()
+                await protocol.send_queue.put(data_bytes)
             await asyncio.sleep(0.05)
         
         logging.info(f"Shutting down tasks for port {port}...")
@@ -82,10 +87,10 @@ async def main_serial_loop(port, baudrate):
         if port in connected_serials:
             del connected_serials[port]
 
-def start_serial_monitor(port, baudrate):
+def start_serial_monitor(port, baudrate, bytesize=8, parity='N', stopbits=1):
     """The entry point for the background thread."""
     logging.info(f"Creating new asyncio event loop for port {port}.")
     try:
-        asyncio.run(main_serial_loop(port, baudrate))
+        asyncio.run(main_serial_loop(port, baudrate, bytesize, parity, stopbits))
     except Exception as e:
         logging.error(f"Unhandled exception caught in start_serial_monitor for {port}: {e}")

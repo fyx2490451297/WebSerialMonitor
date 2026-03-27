@@ -34,11 +34,17 @@ def create_app():
             serial_ports = []
         
         common_baudrates = [9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600]
-        
+        data_bits = [5, 6, 7, 8]
+        parity_options = [('N', 'None'), ('E', 'Even'), ('O', 'Odd')]
+        stop_bits = ['1', '1.5', '2']
+
         return render_template(
-            'SerialMonitor.html', 
-            ports=serial_ports, 
+            'SerialMonitor.html',
+            ports=serial_ports,
             baudrates=common_baudrates,
+            data_bits=data_bits,
+            parity_options=parity_options,
+            stop_bits=stop_bits,
             async_mode=socketio.async_mode
         )
 
