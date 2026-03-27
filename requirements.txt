@@ -4,4 +4,3 @@ pyserial
 pyserial-asyncio
 requests
 websocket-client
-eventlet

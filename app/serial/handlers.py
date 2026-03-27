@@ -5,8 +5,8 @@ from flask import request
 from flask_socketio import Namespace
 from socketio.exceptions import ConnectionRefusedError
 
-from extensions import socketio, connected_serials, connected_serials_lock
-from serial_manager import start_serial_monitor
+from app.extensions import socketio, connected_serials, connected_serials_lock
+from app.serial.manager import start_serial_monitor
 
 class SerialNamespace(Namespace):
     """Handles all Socket.IO events related to serial communication."""

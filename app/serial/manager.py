@@ -5,7 +5,7 @@ import serial
 import serial_asyncio
 import logging
 
-from extensions import socketio, connected_serials, connected_serials_lock
+from app.extensions import socketio, connected_serials, connected_serials_lock
 
 class SerialMonitor(asyncio.Protocol):
     """Asynchronous serial monitor protocol class."""
