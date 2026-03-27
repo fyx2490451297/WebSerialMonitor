@@ -1,4 +1,6 @@
 import logging
+import os
+import secrets
 from flask import Flask, render_template, jsonify
 
 from extensions import socketio
@@ -12,7 +14,7 @@ SERIAL_MONITOR_PORT = 50002
 def create_app():
     """Creates the Flask application using the factory pattern."""
     app = Flask(__name__)
-    app.config['SECRET_KEY'] = 'a_very_secret_key_that_should_be_changed'
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
     
     # --- Initialize Extensions ---
     # Import the socketio instance from extensions.py and bind it to the app

@@ -1,9 +1,11 @@
 import asyncio
+import codecs
+import queue
 import serial
 import serial_asyncio
 import logging
 
-from extensions import socketio, connected_serials
+from extensions import socketio, connected_serials, connected_serials_lock
 
 class SerialMonitor(asyncio.Protocol):
     """Asynchronous serial monitor protocol class."""
@@ -12,7 +14,9 @@ class SerialMonitor(asyncio.Protocol):
         self.port = port
         self.transport = None
         self.send_queue = asyncio.Queue()
-        self._buffer = bytearray()
+        self.connection_lost_event = asyncio.Event()
+        self._text_decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
+        self._pending_carriage_return = False
 
     def connection_made(self, transport):
         self.transport = transport
@@ -25,27 +29,29 @@ class SerialMonitor(asyncio.Protocol):
         hex_str = ' '.join(f'{b:02X}' for b in data)
         socketio.emit('serial_data_recv_hex', {'data': hex_str}, room=self.port, namespace='/serial')
 
-        self._buffer.extend(data)
-
-        # Normalize line endings to \n
-        self._buffer = self._buffer.replace(b'\r\n', b'\n')
-        self._buffer = self._buffer.replace(b'\r', b'\n')
-
-        while b'\n' in self._buffer:
-            line_bytes, self._buffer = self._buffer.split(b'\n', 1)
-
-            try:
-                decoded_line = line_bytes.decode('utf-8', errors='replace')
-                if decoded_line:
-                    # Timestamps are no longer added here; this is handled by the frontend.
-                    socketio.emit('serial_data_recv', {'data': decoded_line}, room=self.port, namespace='/serial')
-            except Exception as e:
-                logging.error(f"Error processing data from {self.port}: {e}")
+        try:
+            decoded_chunk = self._text_decoder.decode(data)
+            normalized_chunk = self._normalize_text_chunk(decoded_chunk)
+            if normalized_chunk:
+                socketio.emit('serial_data_recv', {'data': normalized_chunk}, room=self.port, namespace='/serial')
+        except Exception as e:
+            logging.error(f"Error processing data from {self.port}: {e}")
 
     def connection_lost(self, exc):
-        logging.warning(f"Connection to serial port {self.port} lost. Reason: {exc}")
-        if self.transport and self.transport.loop.is_running():
-            self.transport.loop.stop()
+        try:
+            flushed_text = self._text_decoder.decode(b'', final=True)
+            normalized_chunk = self._normalize_text_chunk(flushed_text, final=True)
+            if normalized_chunk:
+                socketio.emit('serial_data_recv', {'data': normalized_chunk}, room=self.port, namespace='/serial')
+        except Exception as e:
+            logging.error(f"Error flushing buffered data from {self.port}: {e}")
+
+        if exc:
+            logging.warning(f"Connection to serial port {self.port} lost. Reason: {exc}")
+        else:
+            logging.info(f"Connection to serial port {self.port} closed.")
+
+        self.connection_lost_event.set()
 
     async def write_data(self):
         while True:
@@ -55,9 +61,28 @@ class SerialMonitor(asyncio.Protocol):
                 self.send_queue.task_done()
             except asyncio.CancelledError:
                 break
+            except Exception as e:
+                logging.error(f"Error writing data to {self.port}: {e}")
+                self.connection_lost_event.set()
+                raise
+
+    def _normalize_text_chunk(self, text_chunk, final=False):
+        if self._pending_carriage_return:
+            if text_chunk.startswith('\n'):
+                text_chunk = text_chunk[1:]
+            text_chunk = '\n' + text_chunk
+            self._pending_carriage_return = False
+
+        if text_chunk.endswith('\r') and not final:
+            text_chunk = text_chunk[:-1]
+            self._pending_carriage_return = True
+
+        return text_chunk.replace('\r\n', '\n').replace('\r', '\n')
 
 async def main_serial_loop(port, baudrate, bytesize=8, parity='N', stopbits=1):
     """The main function for the asynchronous task."""
+    transport = None
+    write_task = None
     try:
         loop = asyncio.get_running_loop()
         protocol = SerialMonitor(port, baudrate, bytesize, parity, stopbits)
@@ -65,32 +90,90 @@ async def main_serial_loop(port, baudrate, bytesize=8, parity='N', stopbits=1):
             loop, lambda: protocol, port, baudrate,
             bytesize=bytesize, parity=parity, stopbits=stopbits
         )
+        with connected_serials_lock:
+            port_state = connected_serials.get(port)
+            if port_state is not None:
+                port_state['status'] = 'open'
+                port_state['error'] = None
+                port_state['startup_event'].set()
         write_task = asyncio.create_task(protocol.write_data())
-        while port in connected_serials:
-            if not connected_serials[port]['send_data'].empty():
-                data_bytes = connected_serials[port]['send_data'].get()
+
+        while True:
+            with connected_serials_lock:
+                port_state = connected_serials.get(port)
+                if port_state is None or port_state['clients'] <= 0:
+                    break
+                send_queue = port_state['send_data']
+
+            if protocol.connection_lost_event.is_set():
+                socketio.emit(
+                    'serial_error',
+                    {'port': port, 'message': f'Serial connection on {port} was lost.', 'fatal': True},
+                    room=port,
+                    namespace='/serial'
+                )
+                break
+
+            try:
+                data_bytes = send_queue.get_nowait()
                 await protocol.send_queue.put(data_bytes)
-            await asyncio.sleep(0.05)
+                continue
+            except queue.Empty:
+                await asyncio.sleep(0.05)
         
         logging.info(f"Shutting down tasks for port {port}...")
-        write_task.cancel()
-        if transport:
-            transport.close()
     except (serial.SerialException, FileNotFoundError) as e:
         logging.error(f"Failed to connect to serial port {port}: {e}")
-        socketio.emit('serial_error', {'port': port, 'message': str(e)}, room=port, namespace='/serial')
+        with connected_serials_lock:
+            port_state = connected_serials.get(port)
+            if port_state is not None:
+                port_state['status'] = 'error'
+                port_state['error'] = str(e)
+                port_state['startup_event'].set()
+        socketio.emit('serial_error', {'port': port, 'message': str(e), 'fatal': True}, room=port, namespace='/serial')
     except Exception as e:
         logging.error(f"An unexpected error occurred in the serial monitor for {port}: {e}")
-        socketio.emit('serial_error', {'port': port, 'message': 'An unexpected error occurred.'}, room=port, namespace='/serial')
+        with connected_serials_lock:
+            port_state = connected_serials.get(port)
+            if port_state is not None:
+                port_state['status'] = 'error'
+                port_state['error'] = 'An unexpected error occurred.'
+                port_state['startup_event'].set()
+        socketio.emit('serial_error', {'port': port, 'message': 'An unexpected error occurred.', 'fatal': True}, room=port, namespace='/serial')
     finally:
+        if write_task is not None:
+            write_task.cancel()
+            try:
+                await write_task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                pass
+
+        if transport is not None:
+            transport.close()
+
         logging.info(f"Background task for '{port}' has shut down completely.")
-        if port in connected_serials:
-            del connected_serials[port]
+        with connected_serials_lock:
+            port_state = connected_serials.get(port)
+            if port_state is not None:
+                port_state['serial_thread'] = None
+                port_state['startup_event'].set()
+                connected_serials.pop(port, None)
 
 def start_serial_monitor(port, baudrate, bytesize=8, parity='N', stopbits=1):
     """The entry point for the background thread."""
     logging.info(f"Creating new asyncio event loop for port {port}.")
+    loop = asyncio.new_event_loop()
     try:
-        asyncio.run(main_serial_loop(port, baudrate, bytesize, parity, stopbits))
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(main_serial_loop(port, baudrate, bytesize, parity, stopbits))
     except Exception as e:
         logging.error(f"Unhandled exception caught in start_serial_monitor for {port}: {e}")
+    finally:
+        try:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+        except Exception:
+            pass
+        asyncio.set_event_loop(None)
+        loop.close()

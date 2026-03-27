@@ -102,7 +102,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 logToScreen(msg.data, 'hex');
             }
         });
-        _socket.on('serial_error', (msg) => logToScreen(`Error: ${msg.message}`, 'info'));
+        _socket.on('serial_error', (msg) => {
+            logToScreen(`Error: ${msg.message}`, 'info');
+            if (msg.fatal && _socket.connected) {
+                updateUIForConnection(false);
+            }
+        });
         _socket.on('connect_error', (err) => {
             logToScreen(`Connection Error: ${err.message}`, 'info');
             updateUIForConnection(false);
@@ -236,7 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
             socket.emit('serial_data_send', { data, end_with });
             if (hexDisplayToggle.checked) {
                 // Show TX bytes as HEX when HEX display mode is active
-                const hexStr = Array.from(new TextEncoder().encode(data))
+                const hexStr = Array.from(new TextEncoder().encode(data + end_with))
                     .map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
                 logToScreen(hexStr, 'tx');
             } else {

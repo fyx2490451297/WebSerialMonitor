@@ -1,3 +1,5 @@
+from threading import RLock
+
 from flask_socketio import SocketIO
 
 # Instantiate SocketIO without binding it to an app.
@@ -6,3 +8,4 @@ socketio = SocketIO(async_mode='threading')
 
 # The global dictionary for tracking serial connections is also shared from here.
 connected_serials = {}
+connected_serials_lock = RLock()
