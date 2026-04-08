@@ -17,6 +17,7 @@ class SerialMonitor(asyncio.Protocol):
         self.connection_lost_event = asyncio.Event()
         self._text_decoder = codecs.getincrementaldecoder('utf-8')(errors='replace')
         self._pending_carriage_return = False
+        self._line_buffer = ''
 
     def connection_made(self, transport):
         self.transport = transport
@@ -33,7 +34,10 @@ class SerialMonitor(asyncio.Protocol):
             decoded_chunk = self._text_decoder.decode(data)
             normalized_chunk = self._normalize_text_chunk(decoded_chunk)
             if normalized_chunk:
-                socketio.emit('serial_data_recv', {'data': normalized_chunk}, room=self.port, namespace='/serial')
+                self._line_buffer += normalized_chunk
+                while '\n' in self._line_buffer:
+                    line, self._line_buffer = self._line_buffer.split('\n', 1)
+                    socketio.emit('serial_data_recv', {'data': line}, room=self.port, namespace='/serial')
         except Exception as e:
             logging.error(f"Error processing data from {self.port}: {e}")
 
@@ -41,8 +45,10 @@ class SerialMonitor(asyncio.Protocol):
         try:
             flushed_text = self._text_decoder.decode(b'', final=True)
             normalized_chunk = self._normalize_text_chunk(flushed_text, final=True)
-            if normalized_chunk:
-                socketio.emit('serial_data_recv', {'data': normalized_chunk}, room=self.port, namespace='/serial')
+            self._line_buffer += normalized_chunk
+            if self._line_buffer:
+                socketio.emit('serial_data_recv', {'data': self._line_buffer}, room=self.port, namespace='/serial')
+                self._line_buffer = ''
         except Exception as e:
             logging.error(f"Error flushing buffered data from {self.port}: {e}")
 
