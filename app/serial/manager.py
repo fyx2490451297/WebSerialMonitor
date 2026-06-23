@@ -1,11 +1,14 @@
 import asyncio
 import codecs
 import queue
+import re
 import serial
 import serial_asyncio
 import logging
 
 from app.extensions import socketio, connected_serials, connected_serials_lock
+
+ANSI_ESCAPE_RE = re.compile(r'\x1B\[[0-?]*[ -/]*[@-~]')
 
 class SerialMonitor(asyncio.Protocol):
     """Asynchronous serial monitor protocol class."""
@@ -73,6 +76,8 @@ class SerialMonitor(asyncio.Protocol):
                 raise
 
     def _normalize_text_chunk(self, text_chunk, final=False):
+        text_chunk = ANSI_ESCAPE_RE.sub('', text_chunk)
+
         if self._pending_carriage_return:
             if text_chunk.startswith('\n'):
                 text_chunk = text_chunk[1:]
