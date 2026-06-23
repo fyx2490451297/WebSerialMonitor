@@ -37,7 +37,7 @@ class SerialMonitor(asyncio.Protocol):
             decoded_chunk = self._text_decoder.decode(data)
             normalized_chunk = self._normalize_text_chunk(decoded_chunk)
             if normalized_chunk:
-                self._line_buffer += normalized_chunk
+                self._line_buffer = ANSI_ESCAPE_RE.sub('', self._line_buffer + normalized_chunk)
                 while '\n' in self._line_buffer:
                     line, self._line_buffer = self._line_buffer.split('\n', 1)
                     socketio.emit('serial_data_recv', {'data': line}, room=self.port, namespace='/serial')
@@ -48,7 +48,7 @@ class SerialMonitor(asyncio.Protocol):
         try:
             flushed_text = self._text_decoder.decode(b'', final=True)
             normalized_chunk = self._normalize_text_chunk(flushed_text, final=True)
-            self._line_buffer += normalized_chunk
+            self._line_buffer = ANSI_ESCAPE_RE.sub('', self._line_buffer + normalized_chunk)
             if self._line_buffer:
                 socketio.emit('serial_data_recv', {'data': self._line_buffer}, room=self.port, namespace='/serial')
                 self._line_buffer = ''
@@ -76,8 +76,6 @@ class SerialMonitor(asyncio.Protocol):
                 raise
 
     def _normalize_text_chunk(self, text_chunk, final=False):
-        text_chunk = ANSI_ESCAPE_RE.sub('', text_chunk)
-
         if self._pending_carriage_return:
             if text_chunk.startswith('\n'):
                 text_chunk = text_chunk[1:]
